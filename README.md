@@ -15,13 +15,13 @@ Before using the Rust Bindings for MLX, ensure you have the following installed 
 - Git (for cloning the repository)
 - CMake (for compiling MLX C API)
 
-## Building MLX C
+## Building mlx-rust
 
-To build the MLX C library, follow these steps:
+To build the mlx-rust library, follow these steps:
 
 ```sh
 git clone https://github.com/edfix/mlx-rust.git
-cd mlx-c
+cd mlx-rust
 cargo build
 ```
 
