@@ -1,14 +1,14 @@
-use std::ffi::{c_void, CStr};
+use std::ffi::CStr;
 
-use crate::{mlx_free, mlx_string, mlx_string_data};
+use crate::{mlx_string, mlx_string_, mlx_string_data, object::MLXObject};
 
-pub struct MlxString {
-    handle: mlx_string,
+pub struct MLXString {
+    handle: MLXObject<mlx_string_>,
 }
 
-impl MlxString {
-    pub fn as_str(&self) -> Result<&str, std::str::Utf8Error> {
-        let c_string = unsafe { mlx_string_data(self.handle) };
+impl MLXString {
+    pub(crate) fn as_str(&self) -> Result<&str, std::str::Utf8Error> {
+        let c_string = unsafe { mlx_string_data(self.handle.as_ptr()) };
         // SAFETY: We've checked that the pointer is not null, and we assume that it points to
         // a valid, null-terminated C string. The lifetime of the resulting &str is tied to
         // the lifetime of the C string, so the caller must ensure that the C string is valid
@@ -18,15 +18,10 @@ impl MlxString {
         // Convert the CStr to a &str, checking for valid UTF-8
         c_str.to_str()
     }
-    pub fn new(handle: mlx_string) -> Self {
-        Self { handle }
-    }
-}
 
-impl Drop for MlxString {
-    fn drop(&mut self) {
-        unsafe {
-            mlx_free(self.handle as *mut c_void);
+    pub(crate) fn new(handle: mlx_string) -> Self {
+        Self {
+            handle: MLXObject::from_raw(handle),
         }
     }
 }
