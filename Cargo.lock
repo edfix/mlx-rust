@@ -193,6 +193,7 @@ dependencies = [
  "bindgen",
  "cmake",
  "half",
+ "lazy_static",
 ]
 
 [[package]]

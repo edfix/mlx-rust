@@ -2,34 +2,13 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-mod array;
-mod arry_op;
-mod as_array;
-mod device;
+pub mod array;
+pub mod array_op;
+pub mod device;
+pub mod from_array;
+mod object;
 mod stream;
 mod string;
+pub mod to_array;
 mod r#type;
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::ffi::c_void;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-
-    #[test]
-    fn test_create_array() {
-        unsafe {
-            let a = mlx_array_from_int(2);
-            mlx_free(a as *mut c_void);
-        }
-    }
-}

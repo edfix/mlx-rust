@@ -1,56 +1,37 @@
-use std::ffi::c_void;
 use std::fmt::{Display, Formatter};
-use std::rc::Rc;
 use std::slice;
 
-use crate::r#type::MlxType;
-use crate::string::MlxString;
+use crate::object::MLXObject;
 use crate::{
-    mlx_array, mlx_array_from_data, mlx_array_itemsize, mlx_array_nbytes, mlx_array_ndim,
-    mlx_array_shape, mlx_array_size, mlx_array_strides, mlx_free, mlx_tostring,
+    mlx_array, mlx_array_, mlx_array_dtype_, mlx_array_eval, mlx_array_get_dtype,
+    mlx_array_itemsize, mlx_array_nbytes, mlx_array_ndim, mlx_array_shape, mlx_array_size,
+    mlx_array_strides,
 };
 
-#[derive(Clone)]
-pub struct MlxArray {
-    handle: Rc<InnerMlxArray>,
+#[derive(Clone, Debug, PartialEq)]
+pub struct MLXArray {
+    handle: MLXObject<mlx_array_>,
 }
 
-struct InnerMlxArray(mlx_array);
-impl Drop for InnerMlxArray {
-    fn drop(&mut self) {
-        unsafe {
-            mlx_free(self.0 as *mut c_void);
-        }
-    }
-}
-
-impl MlxArray {
+impl MLXArray {
     #[inline]
     pub(crate) fn from_raw(handle: mlx_array) -> Self {
         Self {
-            handle: Rc::new(InnerMlxArray(handle)),
+            handle: MLXObject::from_raw(handle),
         }
     }
 
     #[inline]
     pub(crate) fn as_ptr(&self) -> mlx_array {
-        self.handle.as_ref().0
+        self.handle.as_ptr()
     }
 
-    pub fn array<T: MlxType>(data: &[T], shape: &[i32]) -> Self {
-        let handle = unsafe {
-            mlx_array_from_data(
-                data.as_ptr() as *const ::std::os::raw::c_void,
-                shape.as_ptr() as *const ::std::os::raw::c_int,
-                shape.len() as ::std::os::raw::c_int,
-                T::mlx_array_dtype,
-            )
-        };
-        Self::from_raw(handle)
+    pub(crate) fn dtype(&self) -> mlx_array_dtype_ {
+        unsafe { mlx_array_get_dtype(self.as_ptr()) }
     }
 }
 
-impl MlxArray {
+impl MLXArray {
     /// Number of elements in the array.
     ///
     #[inline]
@@ -86,27 +67,29 @@ impl MlxArray {
             let arr = self.as_ptr();
             let len = mlx_array_ndim(arr);
             let p = mlx_array_shape(arr);
-            slice::from_raw_parts_mut(p, len)
+            slice::from_raw_parts(p, len)
         }
+    }
+
+    pub fn eval(&self) {
+        unsafe { mlx_array_eval(self.as_ptr()) }
     }
 }
 
-impl Display for MlxArray {
+impl Display for MLXArray {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mlxstr = unsafe { mlx_tostring(self.as_ptr() as *mut c_void) };
-        let bind_str = MlxString::new(mlxstr);
-        f.write_str(bind_str.as_str().unwrap())
+        self.handle.fmt(f)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::array::MlxArray;
+    use crate::array::MLXArray;
 
     #[test]
     fn it_works() {
-        let array: MlxArray = 12.0.into();
-        let array1 = MlxArray::array(&[123., 134.], &[2]);
+        let array: MLXArray = 12.0.into();
+        let array1 = MLXArray::array(&[123., 134.], &[2]);
         println!("{}", array + array1.clone() + array1)
     }
 }
