@@ -1,0 +1,9 @@
+[package]
+name = "basic_examples"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+mlx-rust = { workspace = true }
+mlx-ffi-trampoline = { workspace = true }
+mlx-sys = { workspace = true }
