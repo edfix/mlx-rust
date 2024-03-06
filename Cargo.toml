@@ -1,16 +1,10 @@
-[package]
-name = "mlx-rust"
-version = "0.1.0"
-edition = "2021"
-build = "build.rs"
+[workspace]
 
-[dependencies]
-half = "2.4"
-lazy_static = "1.4.0"
+members = ["mlx-rust", "mlx-ffi-trampoline", "mlx-sys", "examples/*"]
+resolver = "2"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[build-dependencies]
-
-bindgen = "0.65.1"
-cmake = "0.1"
+[workspace.dependencies]
+mlx-rust = { path = "mlx-rust" }
+mlx-ffi-trampoline = { path = "mlx-ffi-trampoline" }
+mlx-sys = { path = "mlx-sys" }
