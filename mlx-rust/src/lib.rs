@@ -13,5 +13,7 @@ mod string;
 pub mod to_array;
 mod r#type;
 pub mod vector_array;
+pub mod transform;
+
 pub use array::*;
 pub use vector_array::*;

@@ -1,38 +1,118 @@
-use mlx_sys::{
-    mlx_array_, mlx_closure, mlx_closure_, mlx_closure_apply, mlx_closure_new,
-    mlx_closure_new_unary, mlx_vector_array,
-};
+use std::marker::PhantomData;
+use std::mem::{forget, transmute};
 
-use crate::{object::MLXObject, VectorMLXArray};
+use mlx_sys::{mlx_closure, mlx_closure_, mlx_closure_apply, mlx_closure_new_with_payload, mlx_vector_array};
+
+use crate::{MLXArray, object::MLXObject, VectorMLXArray};
 
 #[derive(PartialEq, Debug)]
-pub struct MLXClosure {
+pub struct MLXClosure<IN, OUT> {
     handle: MLXObject<mlx_closure_>,
+    _data: PhantomData<(IN, OUT)>
 }
 
-pub type UnaryFFICall = unsafe extern "C" fn(*mut mlx_array_) -> *mut mlx_array_;
-pub type VecctorFFICall = unsafe extern "C" fn(arrs: mlx_vector_array) -> mlx_vector_array;
+pub(crate) struct FFiCallback(Box<dyn Fn(&VectorMLXArray) -> VectorMLXArray>);
 
-impl MLXClosure {
-    pub fn new(f: VecctorFFICall) -> Self {
-        let handle = unsafe { mlx_closure_new(Some(f)) };
+impl FFiCallback {
+    pub fn new(f: impl Fn(&VectorMLXArray) -> VectorMLXArray + 'static) -> Self {
+        Self(Box::new(f))
+    }
+}
+
+impl <T: Fn(&MLXArray) -> MLXArray + 'static> From<T> for FFiCallback {
+    fn from(value: T) -> Self {
+        let wrapper = move |input: &VectorMLXArray| {
+            let r = value(&input.get(0).unwrap());
+            VectorMLXArray::from_array(r)
+        };
+        FFiCallback::new(wrapper)
+    }
+}
+
+pub trait MLXFunc<IN, OUT> where OUT: Into<VectorMLXArray>, IN: for<'a> From<&'a VectorMLXArray>, Self: 'static {
+    fn apply(&self, input: IN) -> OUT;
+}
+
+fn to_callback<IN, OUT>(f: impl MLXFunc<IN, OUT> + Sized) -> FFiCallback
+    where OUT: Into<VectorMLXArray>,
+          IN: for<'a> From<&'a VectorMLXArray> {
+    let wrapper = move |input: &VectorMLXArray| {
+        let r = f.apply(input.into());
+        let result: VectorMLXArray = r.into();
+        result
+    };
+    FFiCallback::new(wrapper)
+}
+
+
+
+impl <'a> From<&'a VectorMLXArray> for MLXArray {
+    fn from(value: &'a VectorMLXArray) -> Self {
+        value.get(0).unwrap()
+    }
+}
+
+impl <T> MLXFunc<MLXArray, MLXArray> for T where T: Fn(MLXArray) -> MLXArray + 'static {
+    fn apply(&self, input: MLXArray) -> MLXArray {
+        self(input)
+    }
+}
+
+// impl <IN, T> MLXFunc<IN, VectorMLXArray> for T where T: Fn(IN) -> VectorMLXArray + 'static  {
+//     fn apply(&self, input: IN) -> VectorMLXArray {
+//         self(&input)
+//     }
+// }
+
+impl <T> MLXFunc<VectorMLXArray, VectorMLXArray> for T where T: Fn(&VectorMLXArray) -> VectorMLXArray + 'static  {
+    fn apply(&self, input: VectorMLXArray) -> VectorMLXArray {
+        self(&input)
+    }
+}
+
+
+impl <IN, OUT> MLXClosure<IN, OUT>
+    where IN: for<'a> From<&'a VectorMLXArray> + Into<VectorMLXArray>,
+    OUT: for<'b> From<&'b VectorMLXArray> + Into<VectorMLXArray>
+{
+    pub fn new(f: impl MLXFunc<IN, OUT>) -> MLXClosure<IN, OUT> {
+        Self::from_FFiCallback(to_callback(f))
+    }
+
+    fn from_FFiCallback(f: FFiCallback) -> Self {
+        let fc: Box<FFiCallback> = Box::new(f);
+        let payload  = Box::into_raw(fc) as *mut ::std::os::raw::c_void;
+        extern "C" fn trampoline(input: mlx_vector_array,
+                                 payload: *mut ::std::os::raw::c_void,) -> mlx_vector_array {
+            let callback: Box<FFiCallback> = unsafe {transmute(payload)};
+            let i = VectorMLXArray::from_raw(input);
+            let r = callback.0(&i);
+            let result = r.as_ptr();
+            forget(callback);
+            forget(r);
+            forget(i);
+            result
+        }
+
+        unsafe extern "C" fn free(arg1: *mut ::std::os::raw::c_void) {
+            let _: Box<FFiCallback> = Box::from_raw(arg1 as *mut _);
+        }
+        let handle = unsafe {mlx_closure_new_with_payload(Some(trampoline), payload, Some(free))};
         Self::from_raw(handle)
     }
 
-    pub fn new_unary(f: UnaryFFICall) -> Self {
-        let handle = unsafe { mlx_closure_new_unary(Some(f)) };
-        Self::from_raw(handle)
-    }
-
-    pub fn apply(&self, value: impl Into<VectorMLXArray>) -> VectorMLXArray {
-        let args: VectorMLXArray = value.into();
+    pub fn apply(&self, input: IN) -> OUT {
+        let args: VectorMLXArray = input.into();
         let handle = unsafe { mlx_closure_apply(self.as_ptr(), args.as_ptr()) };
-        VectorMLXArray::from_raw(handle)
+        let vector_array = VectorMLXArray::from_raw(handle);
+        (&vector_array).into()
     }
 
-    pub(crate) fn from_raw(handle: mlx_closure) -> Self {
+
+    pub(crate) fn from_raw(handle: mlx_closure) -> MLXClosure<IN, OUT> {
         Self {
             handle: MLXObject::from_raw(handle),
+            _data: PhantomData::default()
         }
     }
 
@@ -43,48 +123,54 @@ impl MLXClosure {
 
 #[cfg(test)]
 mod tests {
+    use mlx_sys::mlx_vjp;
 
-    use std::mem::forget;
-
-    use mlx_sys::{
-        mlx_array, mlx_array_from_float, mlx_closure_new_unary, mlx_compile, mlx_enable_compile,
-        mlx_vector_array, mlx_vector_array_from_array,
-    };
-
-    use super::MLXClosure;
     use crate::{MLXArray, VectorMLXArray};
 
-    fn unary_call(x: &MLXArray) -> MLXArray {
+    use super::MLXClosure;
+
+    fn unary_call(x: MLXArray) -> MLXArray {
         x.clone() + 3
     }
 
-    extern "C" fn unary_call_wrap(x: mlx_array) -> mlx_array {
-        let input = MLXArray::from_raw(x);
-        let result = unary_call(&input);
-        let r = result.as_ptr();
-        forget(result);
-        forget(input);
-        r
-    }
+    // extern "C" fn unary_call_wrap(x: mlx_array) -> mlx_array {
+    //     let input = MLXArray::from_raw(x);
+    //     let result = unary_call(&input);
+    //     let r = result.as_ptr();
+    //     forget(result);
+    //     forget(input);
+    //     r
+    // }
 
     fn vector_call(x: &VectorMLXArray) -> VectorMLXArray {
         x.clone()
     }
 
-    extern "C" fn vector_call_wrap(x: mlx_vector_array) -> mlx_vector_array {
-        let input = VectorMLXArray::from_raw(x);
-        let result = vector_call(&input);
-        let r = result.as_ptr();
-        forget(result);
-        forget(input);
-        r
-    }
+    // extern "C" fn vector_call_wrap(x: mlx_vector_array) -> mlx_vector_array {
+    //     let input = VectorMLXArray::from_raw(x);
+    //     let result = vector_call(&input);
+    //     let r = result.as_ptr();
+    //     forget(result);
+    //     forget(input);
+    //     r
+    // }
+
+    // #[test]
+    // fn test_apply_vector_mlx_closure() {
+    //     for _ in 0..1000 {
+    //         let f = MLXClosure::new(vector_call_wrap);
+    //         let result = f.apply(2);
+    //         let r = result.get(0).unwrap().to_scalar::<i32>().unwrap();
+    //         assert_eq!(2, r);
+    //         assert_eq!(1, result.len())
+    //     }
+    // }
 
     #[test]
-    fn test_apply_vector_mlx_closure() {
+    fn test_apply_vector_() {
         for _ in 0..1000 {
-            let f = MLXClosure::new(vector_call_wrap);
-            let result = f.apply(2);
+            let f = MLXClosure::new(vector_call);
+            let result = f.apply(2.into());
             let r = result.get(0).unwrap().to_scalar::<i32>().unwrap();
             assert_eq!(2, r);
             assert_eq!(1, result.len())
@@ -94,12 +180,21 @@ mod tests {
     #[test]
     fn test_apply_unary_mlx_closure() {
         for _ in 0..1000 {
-            let f = MLXClosure::new_unary(unary_call_wrap);
-            // unary_call.apply(&2.into());
-            let result = f.apply(2);
-            let r = result.get(0).unwrap().to_scalar::<i32>().unwrap();
+            let f = MLXClosure::new(unary_call);
+            let result = f.apply(2.into());
+            let r = result.to_scalar::<i32>().unwrap();
             assert_eq!(5, r)
         }
+    }
+
+    #[test]
+    fn test_compile() {
+        let f = MLXClosure::new(vector_call);
+        let x: VectorMLXArray = 2.into();
+        let v: VectorMLXArray = 3.into();
+        unsafe { mlx_vjp(f.as_ptr(), x.as_ptr(), v.as_ptr()) };
+
+        println!("compiled ....")
     }
 
     // #[test]

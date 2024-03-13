@@ -5,5 +5,4 @@ edition = "2021"
 
 [dependencies]
 mlx-rust = { workspace = true }
-mlx-ffi-trampoline = { workspace = true }
 mlx-sys = { workspace = true }
