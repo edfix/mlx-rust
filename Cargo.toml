@@ -8,3 +8,4 @@ resolver = "2"
 mlx-rust = { path = "mlx-rust" }
 mlx-ffi-trampoline = { path = "mlx-ffi-trampoline" }
 mlx-sys = { path = "mlx-sys" }
+paste = "1.0"

@@ -5,15 +5,16 @@
 pub mod array;
 pub mod array_op;
 pub mod closure;
+pub mod compile;
 pub mod device;
 pub mod from_array;
 mod object;
-mod stream;
+pub mod stream;
 mod string;
 pub mod to_array;
+pub mod transform;
 mod r#type;
 pub mod vector_array;
-pub mod transform;
 
 pub use array::*;
 pub use vector_array::*;

@@ -1,7 +1,13 @@
+use std::ops::{Add, Div, Mul, Sub};
+
+use mlx_sys::{
+    mlx_add, mlx_cos, mlx_cosh, mlx_divide, mlx_erf, mlx_erfinv, mlx_exp, mlx_floor, mlx_log,
+    mlx_log10, mlx_mean, mlx_mean_all, mlx_multiply, mlx_sigmoid, mlx_sign, mlx_sin, mlx_sinh,
+    mlx_sqrt, mlx_square, mlx_subtract, mlx_tan, mlx_tanh,
+};
+
 use crate::array::MLXArray;
 use crate::stream::{get_default_stream, MLXStream};
-use mlx_sys::{mlx_add, mlx_divide, mlx_multiply, mlx_subtract};
-use std::ops::{Add, Div, Mul, Sub};
 
 impl MLXArray {
     pub fn add_with_stream(&self, rhs: &MLXArray, stream: MLXStream) -> Self {
@@ -23,7 +29,58 @@ impl MLXArray {
         let handle = unsafe { mlx_multiply(self.as_ptr(), rhs.as_ptr(), stream.as_ptr()) };
         Self::from_raw(handle)
     }
+
+    pub fn mean(&self, axes: &[i32], keepdims: bool, stream: MLXStream) -> MLXArray {
+        let handle = unsafe {
+            mlx_mean(
+                self.as_ptr(),
+                axes.as_ptr(),
+                axes.len(),
+                keepdims,
+                stream.as_ptr(),
+            )
+        };
+        MLXArray::from_raw(handle)
+    }
+
+    pub fn mean_all(&self, keepdims: bool, stream: MLXStream) -> MLXArray {
+        let handle = unsafe { mlx_mean_all(self.as_ptr(), keepdims, stream.as_ptr()) };
+        MLXArray::from_raw(handle)
+    }
+
+    // pub fn addmm(v: &MLXArray, bias: &MLXArray, stream: MLXStream) {
+    //     unsafe {
+    //         mlx_addmm()
+    //     }
+    // }
 }
+
+macro_rules! impl_unary_op {
+    ($func_name:ident, $mlx_func:ident) => {
+        pub fn $func_name(v: MLXArray) -> MLXArray {
+            let handle = unsafe { $mlx_func(v.as_ptr(), get_default_stream().as_ptr()) };
+            MLXArray::from_raw(handle)
+        }
+    };
+}
+
+// Usage of the macro to implement `log` and `log10` functions
+impl_unary_op!(sigmoid, mlx_sigmoid);
+impl_unary_op!(sign, mlx_sign);
+impl_unary_op!(sin, mlx_sin);
+impl_unary_op!(sinh, mlx_sinh);
+impl_unary_op!(cos, mlx_cos);
+impl_unary_op!(cosh, mlx_cosh);
+impl_unary_op!(tan, mlx_tan);
+impl_unary_op!(tanh, mlx_tanh);
+impl_unary_op!(square, mlx_square);
+impl_unary_op!(sqrt, mlx_sqrt);
+impl_unary_op!(log, mlx_log);
+impl_unary_op!(log10, mlx_log10);
+impl_unary_op!(erf, mlx_erf);
+impl_unary_op!(erfinv, mlx_erfinv);
+impl_unary_op!(exp, mlx_exp);
+impl_unary_op!(floor, mlx_floor);
 
 macro_rules! impl_lhs_binary_trait {
     ($type:ty, $trait:ident, $op:ident) => {

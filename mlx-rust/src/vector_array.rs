@@ -99,16 +99,45 @@ impl VectorMLXArray {
     }
 }
 
-impl<T: Into<MLXArray>> From<(T, T)> for VectorMLXArray {
-    fn from(value: (T, T)) -> Self {
-        let array: [MLXArray; 2] = [value.0.into(), value.1.into()];
-        let ptr = array.as_ptr() as *mut mlx_array;
-        let num = 2;
-        //safety: The reference count of the given arrays will be increased.
-        let handle = unsafe { mlx_vector_array_from_arrays(ptr, num) };
-        VectorMLXArray::from_raw(handle)
+// impl<T: Into<MLXArray>> From<(T, T)> for VectorMLXArray {
+//     fn from(value: (T, T)) -> Self {
+//         let array: [MLXArray; 2] = [value.0.into(), value.1.into()];
+//         let ptr = array.as_ptr() as *mut mlx_array;
+//         let num = array.len();
+//         //safety: The reference count of the given arrays will be increased.
+//         let handle = unsafe { mlx_vector_array_from_arrays(ptr, num) };
+//         VectorMLXArray::from_raw(handle)
+//     }
+// }
+
+macro_rules! impl_from_tuple_for_vectormlxarray {
+    ($($T:ident),*) => {
+        paste::paste! {
+        impl<$( $T: Into<MLXArray> ),*> From<($( $T ),*)> for VectorMLXArray {
+            fn from(value: ($( $T ),*)) -> Self {
+                let ($([<$T:lower 1>],)*) = value;
+                let array: [MLXArray; count_idents!($( $T )*)] = [$([<$T:lower 1>].into(),)*];
+                let ptr = array.as_ptr() as *mut mlx_array;
+                let num = array.len();
+                let handle = unsafe { mlx_vector_array_from_arrays(ptr, num) };
+                VectorMLXArray::from_raw(handle)
+            }
+        }
     }
+    };
 }
+
+// Helper macro to count identifiers
+macro_rules! count_idents {
+    ($head:ident $($tail:ident)*) => (1usize + count_idents!($($tail)*));
+    () => (0usize);
+}
+
+// impl_from_tuple_for_vectormlxarray!(T1);
+impl_from_tuple_for_vectormlxarray!(T1, T2);
+impl_from_tuple_for_vectormlxarray!(T1, T2, T3);
+impl_from_tuple_for_vectormlxarray!(T1, T2, T3, T4);
+
 
 impl<T: Into<MLXArray>> From<T> for VectorMLXArray {
     fn from(value: T) -> Self {

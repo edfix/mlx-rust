@@ -8,6 +8,7 @@ edition = "2021"
 half = "2.4"
 lazy_static = "1.4.0"
 mlx-sys = { path = "../mlx-sys" }
+paste = {workspace = true}
 # ffi-trampoline = { path = "../ffi-trampoline" }
 
 

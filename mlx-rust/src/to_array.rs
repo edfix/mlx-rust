@@ -2,6 +2,7 @@ use std::ops::Range;
 
 use mlx_sys::{
     mlx_arange, mlx_array_from_bool, mlx_array_from_data, mlx_array_from_float, mlx_array_from_int,
+    mlx_full, mlx_ones,
 };
 
 use crate::{r#type::MlxType, stream::MLXStream, MLXArray};
@@ -31,6 +32,32 @@ impl MLXArray {
             )
         };
         Self::from_raw(handle)
+    }
+
+    pub fn ones<T: MlxType>(shape: &[i32], stream: MLXStream) -> MLXArray {
+        let handle = unsafe {
+            mlx_ones(
+                shape.as_ptr() as *const ::std::os::raw::c_int,
+                shape.len(),
+                T::mlx_array_dtype,
+                stream.as_ptr(),
+            )
+        };
+        MLXArray::from_raw(handle)
+    }
+
+    pub fn full<T: Into<MLXArray>>(shape: &[i32], value: T, stream: MLXStream) -> MLXArray {
+        let array: MLXArray = value.into();
+        let handle = unsafe {
+            mlx_full(
+                shape.as_ptr() as *const ::std::os::raw::c_int,
+                shape.len(),
+                array.as_ptr(),
+                array.dtype(),
+                stream.as_ptr(),
+            )
+        };
+        MLXArray::from_raw(handle)
     }
 }
 
