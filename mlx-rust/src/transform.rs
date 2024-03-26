@@ -143,6 +143,11 @@ where
     fn apply(&self, input: IN) -> VectorMLXArray {
         self.apply(input)
     }
+
+    fn id(&self) -> usize {
+        let pointer: *const GradFunc<IN, OUT> = self;
+        pointer as usize
+    }
 }
 
 pub fn grad<IN, OUT, F>(f: F) -> GradFunc<IN, OUT>

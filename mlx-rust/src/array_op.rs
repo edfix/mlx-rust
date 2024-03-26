@@ -1,10 +1,9 @@
-use std::ops::{Add, Div, Mul, Sub};
-
 use mlx_sys::{
-    mlx_add, mlx_cos, mlx_cosh, mlx_divide, mlx_erf, mlx_erfinv, mlx_exp, mlx_floor, mlx_log,
-    mlx_log10, mlx_mean, mlx_mean_all, mlx_multiply, mlx_sigmoid, mlx_sign, mlx_sin, mlx_sinh,
-    mlx_sqrt, mlx_square, mlx_subtract, mlx_tan, mlx_tanh,
+    mlx_add, mlx_addmm, mlx_cos, mlx_cosh, mlx_divide, mlx_erf, mlx_erfinv, mlx_exp, mlx_floor,
+    mlx_log, mlx_log10, mlx_matmul, mlx_mean, mlx_mean_all, mlx_multiply, mlx_sigmoid, mlx_sign,
+    mlx_sin, mlx_sinh, mlx_sqrt, mlx_square, mlx_subtract, mlx_tan, mlx_tanh, mlx_transpose_all,
 };
+use std::ops::{Add, Div, Mul, Sub};
 
 use crate::array::MLXArray;
 use crate::stream::{get_default_stream, MLXStream};
@@ -48,11 +47,36 @@ impl MLXArray {
         MLXArray::from_raw(handle)
     }
 
-    // pub fn addmm(v: &MLXArray, bias: &MLXArray, stream: MLXStream) {
-    //     unsafe {
-    //         mlx_addmm()
-    //     }
-    // }
+    pub fn matmul(&self, b: MLXArray, stream: MLXStream) -> MLXArray {
+        let handle = unsafe { mlx_matmul(self.as_ptr(), b.as_ptr(), stream.as_ptr()) };
+        MLXArray::from_raw(handle)
+    }
+
+    pub fn t(&self) -> MLXArray {
+        let handle = unsafe { mlx_transpose_all(self.as_ptr(), get_default_stream().as_ptr()) };
+        MLXArray::from_raw(handle)
+    }
+}
+
+pub fn addmm(
+    x: MLXArray,
+    bias: MLXArray,
+    weight: MLXArray,
+    alpha: f32,
+    beta: f32,
+    stream: MLXStream,
+) -> MLXArray {
+    let handle = unsafe {
+        mlx_addmm(
+            bias.as_ptr(),
+            x.as_ptr(),
+            weight.t().as_ptr(),
+            alpha,
+            beta,
+            stream.as_ptr(),
+        )
+    };
+    MLXArray::from_raw(handle)
 }
 
 macro_rules! impl_unary_op {
@@ -81,6 +105,7 @@ impl_unary_op!(erf, mlx_erf);
 impl_unary_op!(erfinv, mlx_erfinv);
 impl_unary_op!(exp, mlx_exp);
 impl_unary_op!(floor, mlx_floor);
+// impl_unary_op!(t, mlx_transpose_all);
 
 macro_rules! impl_lhs_binary_trait {
     ($type:ty, $trait:ident, $op:ident) => {

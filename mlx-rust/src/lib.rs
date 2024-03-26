@@ -15,6 +15,7 @@ pub mod to_array;
 pub mod transform;
 mod r#type;
 pub mod vector_array;
+pub mod nn;
 
 pub use array::*;
 pub use vector_array::*;

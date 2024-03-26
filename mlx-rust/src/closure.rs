@@ -28,6 +28,8 @@ where
     Self: 'static,
 {
     fn apply(&self, input: IN) -> OUT;
+
+    fn id(&self) -> usize;
 }
 
 fn to_callback<IN, OUT>(f: impl MLXFunc<IN, OUT> + Sized) -> FFiCallback
@@ -55,6 +57,11 @@ where
 {
     fn apply(&self, input: MLXArray) -> MLXArray {
         self(input)
+    }
+
+    fn id(&self) -> usize {
+        let pointer: *const T = self;
+        pointer as usize
     }
 }
 
@@ -87,6 +94,11 @@ where
         let (i1, i2, i3) = input;
         self(i1, i2, i3)
     }
+
+    fn id(&self) -> usize {
+        let pointer: *const T = self;
+        pointer as usize
+    }
 }
 
 impl<'a> From<&'a VectorMLXArray> for (MLXArray, MLXArray) {
@@ -101,6 +113,11 @@ where
     fn apply(&self, input: (MLXArray, MLXArray)) -> MLXArray {
         let (i1, i2) = input;
         self(i1, i2)
+    }
+
+    fn id(&self) -> usize {
+        let pointer: *const T = self;
+        pointer as usize
     }
 }
 
@@ -144,6 +161,11 @@ where
 {
     fn apply(&self, input: VectorMLXArray) -> VectorMLXArray {
         self(&input)
+    }
+
+    fn id(&self) -> usize {
+        let pointer: *const T = self;
+        pointer as usize
     }
 }
 
@@ -203,10 +225,7 @@ where
 mod tests {
     use std::mem::forget;
 
-    use mlx_sys::{
-        mlx_array, mlx_array_from_float, mlx_closure_apply, mlx_closure_new_unary, mlx_compile,
-        mlx_enable_compile, mlx_vector_array_from_array, mlx_vjp,
-    };
+    use mlx_sys::{mlx_array, mlx_vjp};
 
     use crate::{MLXArray, VectorMLXArray};
 

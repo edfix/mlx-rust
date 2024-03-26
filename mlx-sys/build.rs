@@ -29,6 +29,7 @@ fn main() {
 
     // This is the path to the `c` headers file.
     let headers_path_str = libdir_path.join("mlx/c/mlx.h");
+    let transform_header_str = libdir_path.join("mlx/c/transforms_impl.h");
 
     // Tell cargo to look for shared libraries in the specified directory
     println!("cargo:rustc-link-search={}", dst.join("lib").display());
@@ -44,6 +45,7 @@ fn main() {
 
     let bindings = bindgen::Builder::default()
         .header(headers_path_str.to_str().unwrap())
+        .header(transform_header_str.to_str().unwrap())
         .clang_arg(format!("-I{}", libdir_path.to_str().unwrap()))
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .generate()
