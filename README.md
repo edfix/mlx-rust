@@ -2,6 +2,8 @@
 
 Welcome to the Rust Bindings for MLX project! This repository contains Rust language bindings for MLX, an array framework designed for machine learning research on Apple silicon.
 
+## *** Note it's Not product ready!
+
 ## Overview
 
 mlx-rust use MLX C API for binding.These Rust bindings provide a safe and efficient interface to MLX, allowing researchers and developers to harness the power of MLX within Rust applications.
@@ -76,6 +78,14 @@ pub fn main() {
 
 
 ```
+
+## Run examples
+
+```shell
+cd ./examples/phi2
+cargo run --release
+```
+
 
 ## License
 

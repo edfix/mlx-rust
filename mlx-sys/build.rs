@@ -2,6 +2,7 @@ extern crate bindgen;
 
 use std::env;
 use std::path::PathBuf;
+
 // use std::process::Command;
 
 fn main() {
@@ -27,7 +28,6 @@ fn main() {
 
     let dst = cmake::Config::new(&libdir_path)
         // .env("CMAKE_BUILD_TYPE", "Release")
-        .profile("Release")
         .build();
 
     // This is the path to the `c` headers file.
