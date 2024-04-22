@@ -5,4 +5,6 @@ edition = "2021"
 
 [dependencies]
 mlx-rust = { workspace = true }
-mlx-sys = { workspace = true }
+mlx-sys = { workspace = true}
+mlx-nn = {workspace = true}
+half = {workspace = true}

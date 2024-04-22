@@ -1,11 +1,27 @@
 [workspace]
 
-members = ["mlx-rust", "mlx-ffi-trampoline", "mlx-sys", "examples/*"]
+members = [
+    "mlx-rust",
+    "mlx-sys",
+    "mlx-derive",
+    "examples/*",
+    "mlx-nn",
+    "mlx-model",
+]
 resolver = "2"
 
 
 [workspace.dependencies]
 mlx-rust = { path = "mlx-rust" }
-mlx-ffi-trampoline = { path = "mlx-ffi-trampoline" }
 mlx-sys = { path = "mlx-sys" }
+mlx-nn = { path = "mlx-nn" }
+mlx-derive = { path = "mlx-derive" }
+mlx-model = { path = "mlx-model" }
 paste = "1.0"
+half = "2.4"
+serde = { version = "1.0", features = ["derive"]}
+serde_json = "1.0.99"
+hf-hub = { git = "https://github.com/edfix/hf-hub.git", branch = "feature/endpoint_from_env" }
+tokenizers = { version = "0.15.0", features = ["onig"] }
+clap = { version = "4.2.4", features = ["derive"] }
+safetensors = "0.4.1"

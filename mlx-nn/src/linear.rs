@@ -1,15 +1,14 @@
-use crate::{
-    array_op::addmm,
-    r#type::MlxType,
-    random::{key, uniform},
-    stream::get_default_stream,
-    MLXArray,
-};
+use mlx_derive::Module;
+use mlx_rust::array_op::addmm;
+use mlx_rust::r#type::MlxType;
+use mlx_rust::random::{key, uniform};
+use mlx_rust::stream::get_default_stream;
 
-use super::Module;
+use crate::MLXArray;
 
+#[derive(Clone, Debug, Module)]
 pub struct Linear {
-    w: MLXArray,
+    weight: MLXArray,
     bias: Option<MLXArray>,
 }
 
@@ -31,12 +30,13 @@ impl Linear {
                 rng_key,
                 get_default_stream(),
             );
+            // let bias = MLXArray::ones::<T>(&[out_features as i32], get_default_stream());
             Some(bias)
         } else {
             None
         };
         Self {
-            w: weight,
+            weight: weight,
             bias: bias,
         }
     }
@@ -45,15 +45,49 @@ impl Linear {
 impl Linear {
     fn fwd(&self, value: MLXArray) -> MLXArray {
         match &self.bias {
-            None => value.matmul(self.w.t(), get_default_stream()),
+            None => value.matmul(self.weight.t(None), None),
             Some(bias) => addmm(
-                bias.clone(),
-                value,
-                self.w.t(),
+                &value,
+                bias,
+                &self.weight,
                 1.0,
                 1.0,
-                get_default_stream(),
+                None
             ),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use mlx_rust::MLXArray;
+    use mlx_rust::module::Module;
+    use mlx_rust::stream::get_default_stream;
+
+    use crate::linear::Linear;
+
+    #[test]
+    pub fn test_forward_params() {
+        let x = MLXArray::ones::<f32>(&[3, 1024], get_default_stream());
+        let linear = Linear::new::<f32>(1024, 1024, true);
+        let y = linear.forward(x);
+        println!("{}", y)
+    }
+
+    #[test]
+    pub fn test_update_params() {
+        let in_features = 1024;
+        let out_features = 1024;
+        let x = MLXArray::ones::<f32>(&[3, in_features as i32], get_default_stream());
+        let mut linear = Linear::new::<f32>(in_features, out_features, true);
+        let mut params: HashMap<String, MLXArray> = HashMap::new();
+        params.insert("weight".into(), MLXArray::ones::<f32>(&[out_features as i32, in_features as i32], get_default_stream()));
+        params.insert("bias".into(), MLXArray::ones::<f32>(&[out_features as i32], get_default_stream()));
+        linear.update_named_params("", &mut params);
+        let y = linear.forward(x);
+        println!("{}", y);
+        // assert_eq!(y, MLXArray::ones::<f32>(&[out_features as i32], get_default_stream()))
     }
 }

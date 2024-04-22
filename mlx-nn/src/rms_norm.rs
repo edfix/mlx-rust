@@ -1,11 +1,13 @@
-use crate::nn::fast::fast_rms_norm;
-use crate::nn::Module;
-use crate::r#type::MlxType;
-use crate::stream::get_default_stream;
+use mlx_derive::Module;
+use mlx_rust::fast::fast_rms_norm;
+use mlx_rust::r#type::MlxType;
+use mlx_rust::stream::get_default_stream;
 use crate::MLXArray;
 
+#[derive(Clone, Debug, Module)]
 pub struct RmsNorm {
     weight: MLXArray,
+    #[param(skip)]
     eps: f32,
 }
 

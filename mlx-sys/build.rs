@@ -25,11 +25,16 @@ fn main() {
         .canonicalize()
         .expect("cannot canonicalize path");
 
-    let dst = cmake::build(&libdir_path);
+    let dst = cmake::Config::new(&libdir_path)
+        // .env("CMAKE_BUILD_TYPE", "Release")
+        .profile("Release")
+        .build();
 
     // This is the path to the `c` headers file.
     let headers_path_str = libdir_path.join("mlx/c/mlx.h");
     let transform_header_str = libdir_path.join("mlx/c/transforms_impl.h");
+    let random_header_str = libdir_path.join("mlx/c/random.h");
+    let fast_header_str = libdir_path.join("mlx/c/fast.h");
 
     // Tell cargo to look for shared libraries in the specified directory
     println!("cargo:rustc-link-search={}", dst.join("lib").display());
@@ -46,6 +51,8 @@ fn main() {
     let bindings = bindgen::Builder::default()
         .header(headers_path_str.to_str().unwrap())
         .header(transform_header_str.to_str().unwrap())
+        .header(random_header_str.to_str().unwrap())
+        .header(fast_header_str.to_str().unwrap())
         .clang_arg(format!("-I{}", libdir_path.to_str().unwrap()))
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .generate()

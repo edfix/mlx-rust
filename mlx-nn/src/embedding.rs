@@ -1,14 +1,13 @@
-use crate::{
-    r#type::MlxType,
-    random::{key, uniform},
-    stream::get_default_stream,
-    MLXArray,
-};
+use mlx_derive::Module;
+use mlx_rust::r#type::MlxType;
+use mlx_rust::random::{key, uniform};
+use mlx_rust::stream::get_default_stream;
 
-use super::Module;
+use crate::MLXArray;
 
+#[derive(Clone, Debug, Module)]
 pub struct Embedding {
-    w: MLXArray,
+    weight: MLXArray,
 }
 
 impl Embedding {
@@ -21,10 +20,10 @@ impl Embedding {
             rng_key,
             get_default_stream(),
         );
-        Self { w: weight }
+        Self { weight: weight }
     }
 
     fn fwd(&self, index: MLXArray) -> MLXArray {
-        self.w.index_select(0, index, get_default_stream())
+        self.weight.index_select(0, index, None)
     }
 }
