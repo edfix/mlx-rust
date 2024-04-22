@@ -38,9 +38,9 @@ impl<T> Drop for MLXObject<T> {
 }
 
 impl<T> MLXObject<T> {
-    pub(crate) fn from_raw(handler: *mut T) -> Self {
+    pub(crate) fn from_raw(handle: *mut T) -> Self {
         Self {
-            ptr: handler,
+            ptr: handle,
             data: PhantomData::default(),
         }
     }
@@ -59,7 +59,7 @@ impl<T> Debug for MLXObject<T> {
 impl<T> Display for MLXObject<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mlxstr = unsafe { mlx_tostring(self.as_ptr() as *mut c_void) };
-        let bind_str = MLXString::new(mlxstr);
+        let bind_str = MLXString::from_raw(mlxstr);
         f.write_str(bind_str.as_str().unwrap())
     }
 }

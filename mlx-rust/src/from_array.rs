@@ -32,7 +32,7 @@ mod tests {
     #[test]
     fn test_to_scalar() {
         let array1: MLXArray = 2.into();
-        assert_eq!(2, array1.to_scalar().unwrap())
+        assert_eq!(2, array1.to_scalar::<i32>().unwrap())
     }
 
     #[test]

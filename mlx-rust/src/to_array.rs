@@ -1,11 +1,9 @@
 use std::ops::Range;
 
-use mlx_sys::{
-    mlx_arange, mlx_array_from_bool, mlx_array_from_data, mlx_array_from_float, mlx_array_from_int,
-    mlx_full, mlx_ones,
-};
+use mlx_sys::{mlx_arange, mlx_array_from_bool, mlx_array_from_data, mlx_array_from_float, mlx_array_from_int, mlx_concatenate, mlx_full, mlx_ones, mlx_zeros, mlx_zeros_like};
 
-use crate::{r#type::MlxType, stream::MLXStream, MLXArray};
+use crate::{MLXArray, r#type::MlxType, stream::MLXStream, VectorMLXArray};
+use crate::stream::get_default_stream;
 
 impl MLXArray {
     /// the data will be copied, so it's safe.
@@ -21,6 +19,11 @@ impl MLXArray {
         Self::from_raw(handle)
     }
 
+    // pub fn rand<T: MlxType>(shapes: &[i32]) -> Self {
+    //     let handle = unsafe { mlx_array };
+    //     Self::from_raw(handle)
+    // }
+
     pub fn arange<T: MlxType>(range: Range<f64>, step: f64, stream: MLXStream) -> Self {
         let handle = unsafe {
             mlx_arange(
@@ -34,12 +37,41 @@ impl MLXArray {
         Self::from_raw(handle)
     }
 
+    pub fn cat<T: Into<VectorMLXArray>>(array: T, axis: i32,  stream: MLXStream) -> MLXArray {
+        let handle = unsafe {
+            mlx_concatenate(array.into().as_ptr(), axis, stream.as_ptr())
+        };
+        MLXArray::from_raw(handle)
+    }
+
     pub fn ones<T: MlxType>(shape: &[i32], stream: MLXStream) -> MLXArray {
         let handle = unsafe {
             mlx_ones(
                 shape.as_ptr() as *const ::std::os::raw::c_int,
                 shape.len(),
                 T::mlx_array_dtype,
+                stream.as_ptr(),
+            )
+        };
+        MLXArray::from_raw(handle)
+    }
+    pub fn zeros<T: MlxType>(shape: &[i32], stream: MLXStream) -> MLXArray {
+        let handle = unsafe {
+            mlx_zeros(
+                shape.as_ptr() as *const ::std::os::raw::c_int,
+                shape.len(),
+                T::mlx_array_dtype,
+                stream.as_ptr(),
+            )
+        };
+        MLXArray::from_raw(handle)
+    }
+
+    pub fn zeros_like(&self, stream: Option<MLXStream>) -> MLXArray {
+        let stream = stream.unwrap_or_else(|| get_default_stream());
+        let handle = unsafe {
+            mlx_zeros_like(
+                self.as_ptr(),
                 stream.as_ptr(),
             )
         };

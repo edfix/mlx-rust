@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use mlx_sys::{
-    mlx_compile, mlx_detail_compile, mlx_detail_compile_erase, mlx_disable_compile,
+    mlx_detail_compile, mlx_detail_compile_erase, mlx_disable_compile,
     mlx_enable_compile,
 };
 
